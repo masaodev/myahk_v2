@@ -28,6 +28,10 @@ openWordDir(work_dir) {
     timeString := FormatTime(,"yyyyMMdd")
     param := work_dir . "\" . timeString
     createFolderWhenNotExists(param)
+    ; Shiftキーが押されていない場合のみクリップボードにコピー
+    if (!GetKeyState("Shift", "P")) {
+        A_Clipboard := param
+    }
     Run param
 }
 
