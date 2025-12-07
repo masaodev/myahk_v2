@@ -1,0 +1,7 @@
+[Obsidian]
+; Obsidianのvault名を指定（Obsidianを使用しない場合はそのまま）
+vault=obsidian-work
+
+[Paths]
+; 一時メモファイルのパス（%USERPROFILE%は自動的に展開されます）
+temp_memo=%USERPROFILE%\.myahk_v2\一時メモ.txt

@@ -1,0 +1,17 @@
+# Windows
+Thumbs.db
+desktop.ini
+
+# AutoHotkey
+*.lnk
+
+# Backup
+backup/
+
+# IDE
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.log
