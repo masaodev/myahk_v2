@@ -41,10 +41,10 @@ handlerCreateSqlInsentence(ItemName, ItemPos, MyMenu) {
   result := "in ("
   Loop Parse Trim(A_Clipboard,"`r`n"), "`n", "`r"
   {
-    result := result . "`r`n'" . A_LoopField . "',"
+    result := result . "`r`n  '" . A_LoopField . "',"
   }
   result := SubStr(result, 1, StrLen(result)-1)
-  result := result . ")"
+  result := result . "`r`n)"
   A_Clipboard := result
 }
 
@@ -144,20 +144,20 @@ fileBackup(backuplist) {
 handlerDecodeURI(ItemName, ItemPos, MyMenu) {
   ; クリップボードの内容を取得
   originalText := A_Clipboard
-  
+
   ; 空の場合は何もしない
   if (originalText = "") {
       MsgBox("クリップボードが空です。", "URIデコード", "OK Icon!")
       return
   }
-  
+
   ; URIデコードを実行
   try {
       decodedText := DecodeUTF8URIComponent(originalText)
-      
+
       ; 結果をクリップボードに設定
       A_Clipboard := decodedText
-      
+
       ; 結果を表示（デバッグ用）
       if (originalText != decodedText) {
           MsgBox("URIデコードが完了しました。`n`n元のテキスト: " . originalText . "`n`nデコード結果: " . decodedText, "URIデコード", "OK Icon!")
@@ -167,4 +167,82 @@ handlerDecodeURI(ItemName, ItemPos, MyMenu) {
   } catch Error as e {
       MsgBox("URIデコード中にエラーが発生しました: " . e.Message, "エラー", "OK Icon!")
   }
+}
+
+;; Git BashパスとWindowsパスを相互変換する
+handlerConvertPath(ItemName, ItemPos, MyMenu) {
+  originalPath := Trim(A_Clipboard)
+
+  ; 空の場合は何もしない
+  if (originalPath = "") {
+      TrayTip("クリップボードが空です。")
+      return
+  }
+
+  ; パス形式を判定して変換
+  convertedPath := ""
+
+  ; Git Bash形式かどうかチェック（例：/c/Users/... または /d/Projects/...）
+  if (RegExMatch(originalPath, "^/([a-z])/(.*)$", &match)) {
+      ; Git Bash → Windows
+      driveLetter := StrUpper(match[1])
+      restPath := StrReplace(match[2], "/", "\")
+      convertedPath := driveLetter . ":\" . restPath
+      conversionType := "Git Bash → Windows"
+  }
+  ; Windows形式かどうかチェック（例：C:\Users\... または D:\Projects\...）
+  else if (RegExMatch(originalPath, "^([A-Za-z]):\\(.*)$", &match)) {
+      ; Windows → Git Bash
+      driveLetter := StrLower(match[1])
+      restPath := StrReplace(match[2], "\", "/")
+      convertedPath := "/" . driveLetter . "/" . restPath
+      conversionType := "Windows → Git Bash"
+  }
+  else {
+      TrayTip("パス形式を認識できませんでした。")
+      return
+  }
+
+  ; 結果をクリップボードに設定
+  A_Clipboard := convertedPath
+  TrayTip("パス変換完了: " . conversionType)
+}
+
+;; WSLパスとWindowsパスを相互変換する
+handlerConvertPathWSL(ItemName, ItemPos, MyMenu) {
+  originalPath := Trim(A_Clipboard)
+
+  ; 空の場合は何もしない
+  if (originalPath = "") {
+      TrayTip("クリップボードが空です。")
+      return
+  }
+
+  ; パス形式を判定して変換
+  convertedPath := ""
+
+  ; WSL形式かどうかチェック（例：/mnt/c/Users/... または /mnt/d/Projects/...）
+  if (RegExMatch(originalPath, "^/mnt/([a-z])/(.*)$", &match)) {
+      ; WSL → Windows
+      driveLetter := StrUpper(match[1])
+      restPath := StrReplace(match[2], "/", "\")
+      convertedPath := driveLetter . ":\" . restPath
+      conversionType := "WSL → Windows"
+  }
+  ; Windows形式かどうかチェック（例：C:\Users\... または D:\Projects\...）
+  else if (RegExMatch(originalPath, "^([A-Za-z]):\\(.*)$", &match)) {
+      ; Windows → WSL
+      driveLetter := StrLower(match[1])
+      restPath := StrReplace(match[2], "\", "/")
+      convertedPath := "/mnt/" . driveLetter . "/" . restPath
+      conversionType := "Windows → WSL"
+  }
+  else {
+      TrayTip("パス形式を認識できませんでした。")
+      return
+  }
+
+  ; 結果をクリップボードに設定
+  A_Clipboard := convertedPath
+  TrayTip("パス変換完了: " . conversionType)
 } 
