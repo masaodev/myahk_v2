@@ -106,7 +106,10 @@ createToolsAllMenu() {
 ; Funcメニューを作成
 createFuncMenu() {
     menutmp := Menu()
-    menutmp.add("t: 空白除去", handlerDeleteEmpty)
+    menutmp.add("t: 前後の空白除去", handlerTrimWhitespace)
+    menutmp.add("e: すべての空白削除", handlerDeleteAllWhitespace)
+    menutmp.add("n: 改行をCRLFに統一", handlerUnifyNewlineToCRLF)
+    menutmp.add("d: 改行削除", handlerDeleteNewline)
     menutmp.add("c: ゴミ箱を空にする", handlerFileRecycleEmpty)
     menutmp.add("b: ファイルバックアップ", handlerFileBackup)
     menutmp.add("m: メール用ファイルパス整形", handlerFormatForMail)

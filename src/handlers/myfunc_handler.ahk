@@ -3,9 +3,48 @@
 #Include ../utils/create_shortcut.ahk
 
 ;; クリップボードのテキストから前後の空白を除去する
-handlerDeleteEmpty(ItemName, ItemPos, MyMenu) {
+handlerTrimWhitespace(ItemName, ItemPos, MyMenu) {
     A_Clipboard := Trim(A_Clipboard," `t`r`n")
-    TrayTip("空白を除去しました。")
+    TrayTip("前後の空白を除去しました。")
+}
+
+;; クリップボードのテキストからすべての空白文字を削除する
+handlerDeleteAllWhitespace(ItemName, ItemPos, MyMenu) {
+    text := A_Clipboard
+
+    ; すべての空白文字を削除
+    text := StrReplace(text, " ", "")   ; 半角スペースを削除
+    text := StrReplace(text, "`t", "")  ; タブを削除
+    text := StrReplace(text, "　", "")  ; 全角スペースを削除
+
+    A_Clipboard := text
+    TrayTip("すべての空白を削除しました。")
+}
+
+;; クリップボードのテキストの改行をLFからCRLFに統一する
+handlerUnifyNewlineToCRLF(ItemName, ItemPos, MyMenu) {
+    text := A_Clipboard
+
+    ; すべての改行をLFに統一してから、CRLFに変換
+    text := StrReplace(text, "`r`n", "`n")  ; CRLFをLFに
+    text := StrReplace(text, "`r", "`n")    ; CRをLFに（Macの古い形式対応）
+    text := StrReplace(text, "`n", "`r`n")  ; LFをCRLFに
+
+    A_Clipboard := text
+    TrayTip("改行をCRLFに統一しました。")
+}
+
+;; クリップボードのテキストからすべての改行文字を削除する
+handlerDeleteNewline(ItemName, ItemPos, MyMenu) {
+    text := A_Clipboard
+
+    ; すべての改行文字を削除
+    text := StrReplace(text, "`r`n", "")  ; CRLFを削除
+    text := StrReplace(text, "`r", "")    ; CRを削除
+    text := StrReplace(text, "`n", "")    ; LFを削除
+
+    A_Clipboard := text
+    TrayTip("改行を削除しました。")
 }
 
 ;; クリップボードの各行の先頭に引用記号(> )を追加する
