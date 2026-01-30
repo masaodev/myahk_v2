@@ -37,6 +37,7 @@ vk1C::myMenu.Show()                        ; 変換キー: メインメニュー
 vk1D & t::toolsMenu.Show()               ; 無変換 + T: ツールメニュー
 vk1D & a::toolsMenuAll.Show()            ; 無変換 + A: 全ツールメニュー
 vk1D & s::myFuncMenu.show()               ; 無変換 + S: Funcメニュー
+vk1D & g::Send("^!e")                       ; 無変換 + G: Ctrl+Alt+E を送信
 
 ; メインメニューアクション項目のホットキーを設定ファイルから動的に登録
 registerMainMenuHotkeys()
