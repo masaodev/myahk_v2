@@ -119,6 +119,7 @@ createFuncMenu() {
     menutmp.add("w: パス変換（WSL⇔Windows）", handlerConvertPathWSL)
     menutmp.add("o: obsidianリンク生成", handlerCreateObsidianUrl)
     menutmp.add("u: URIデコード", handlerDecodeURI)
+    menutmp.add("v: ウィンドウ操作", handlerWindowCapture)
     menutmp.add()
     menutmp.add("テキスト化したショートカットを復元", handlerRestoreShortcutText)
     menutmp.add("フォルダ内ショートカットをテキスト化", handlerCreateShortcutText)

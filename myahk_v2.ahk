@@ -11,6 +11,7 @@
 #Include src/handlers/app_launcher.ahk
 #Include src/utils/common_func.ahk
 #Include src/handlers/myfunc_handler.ahk
+#Include src/handlers/window_capture_handler.ahk
 #Include src/utils/create_shortcut.ahk
 #Include src/utils/shortcut_validator.ahk
 #Include src/handlers/shortcut_ui_handler.ahk
