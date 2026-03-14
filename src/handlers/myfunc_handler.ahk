@@ -87,6 +87,65 @@ handlerCreateSqlInsentence(ItemName, ItemPos, MyMenu) {
   A_Clipboard := result
 }
 
+;; クリップボードの各行を1000件ごとに分割したSQLのIN句を生成する（OR連結）
+handlerCreateSqlInsentenceLarge(ItemName, ItemPos, MyMenu) {
+    ; カラム名を入力してもらう（例: user_id）
+    columnInput := InputBox("カラム名を入力してください（例: user_id）", "カラム名入力")
+    if (columnInput.Result != "OK" || columnInput.Value == "") {
+        return
+    }
+    columnName := Trim(columnInput.Value)
+
+    ; クリップボードから値を取得し、配列に変換
+    values := []
+    Loop Parse, Trim(A_Clipboard, "`r`n"), "`n", "`r" {
+        if (A_LoopField != "") {
+            values.Push(A_LoopField)
+        }
+    }
+
+    ; 値がない場合
+    if (values.Length == 0) {
+        TrayTip("クリップボードに値が見つかりませんでした。")
+        return
+    }
+
+    ; 1000件ごとに分割してIN句を生成
+    chunkSize := 1000
+    totalChunks := Ceil(values.Length / chunkSize)
+    result := ""
+
+    Loop totalChunks {
+        chunkIndex := A_Index
+        startIdx := (chunkIndex - 1) * chunkSize + 1
+        endIdx := Min(chunkIndex * chunkSize, values.Length)
+
+        ; チャンク間の区切り（最初以外はOR）
+        if (chunkIndex > 1) {
+            result := result . "`r`n  OR`r`n"
+        }
+
+        ; IN句の開始
+        result := result . columnName . " in (`r`n"
+
+        ; このチャンクの値を追加
+        Loop {
+            idx := startIdx + A_Index - 1
+            if (idx > endIdx) {
+                break
+            }
+            result := result . "  '" . values[idx] . "',`r`n"
+        }
+
+        ; 最後のカンマを削除してIN句を閉じる
+        result := SubStr(result, 1, StrLen(result)-3)
+        result := result . "`r`n)"
+    }
+
+    A_Clipboard := result
+    TrayTip("SQL IN句を生成しました。" . totalChunks . "分割")
+}
+
 ;; システムのゴミ箱を空にする
 handlerFileRecycleEmpty(ItemName, ItemPos, MyMenu) {
   FileRecycleEmpty

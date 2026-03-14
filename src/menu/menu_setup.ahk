@@ -115,6 +115,7 @@ createFuncMenu() {
     menutmp.add("m: メール用ファイルパス整形", handlerFormatForMail)
     menutmp.add("r: 行頭に(> )", handlerAddQuote)
     menutmp.add("q: SQL IN句生成", handlerCreateSqlInsentence)
+    menutmp.add("&l: SQL IN句生成（1000件分割）", handlerCreateSqlInsentenceLarge)
     menutmp.add("p: パス変換（Git Bash⇔Windows）", handlerConvertPath)
     menutmp.add("w: パス変換（WSL⇔Windows）", handlerConvertPathWSL)
     menutmp.add("o: obsidianリンク生成", handlerCreateObsidianUrl)
