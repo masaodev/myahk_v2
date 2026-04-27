@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QRコードリーダー</title>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --panel: #1e293b;
+        --border: #334155;
+        --text: #e2e8f0;
+        --muted: #94a3b8;
+        --accent: #38bdf8;
+        --accent-hover: #0ea5e9;
+        --success: #22c55e;
+        --danger: #ef4444;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 1.5rem;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          "Hiragino Sans",
+          "Yu Gothic UI",
+          sans-serif;
+        line-height: 1.6;
+      }
+      h1 {
+        margin: 0 0 1rem;
+        font-size: 1.5rem;
+      }
+      .container {
+        max-width: 720px;
+        margin: 0 auto;
+      }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+      }
+      .tabs {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+      }
+      .tab {
+        flex: 1;
+        padding: 0.6rem 1rem;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--text);
+        cursor: pointer;
+        font-size: 0.95rem;
+        transition: all 0.15s;
+      }
+      .tab:hover {
+        border-color: var(--accent);
+      }
+      .tab.active {
+        background: var(--accent);
+        color: #0f172a;
+        border-color: var(--accent);
+        font-weight: 600;
+      }
+      .pane {
+        display: none;
+      }
+      .pane.active {
+        display: block;
+      }
+      button {
+        background: var(--accent);
+        color: #0f172a;
+        border: none;
+        padding: 0.6rem 1.2rem;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.95rem;
+        font-weight: 600;
+        transition: background 0.15s;
+      }
+      button:hover {
+        background: var(--accent-hover);
+      }
+      button:disabled {
+        background: var(--border);
+        color: var(--muted);
+        cursor: not-allowed;
+      }
+      button.secondary {
+        background: transparent;
+        color: var(--text);
+        border: 1px solid var(--border);
+      }
+      button.secondary:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      #video,
+      #canvas-preview {
+        width: 100%;
+        max-height: 60vh;
+        border-radius: 8px;
+        background: #000;
+        display: block;
+      }
+      #canvas-preview {
+        display: none;
+      }
+      .dropzone {
+        border: 2px dashed var(--border);
+        border-radius: 8px;
+        padding: 2.5rem 1rem;
+        text-align: center;
+        color: var(--muted);
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .dropzone:hover,
+      .dropzone.dragover {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: rgba(56, 189, 248, 0.05);
+      }
+      .dropzone input {
+        display: none;
+      }
+      .controls {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-top: 0.75rem;
+      }
+      .result {
+        margin-top: 1rem;
+      }
+      .result-label {
+        font-size: 0.85rem;
+        color: var(--muted);
+        margin-bottom: 0.3rem;
+      }
+      .result-text {
+        background: #0b1220;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 0.75rem;
+        font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+        font-size: 0.95rem;
+        word-break: break-all;
+        white-space: pre-wrap;
+        min-height: 3rem;
+      }
+      .result-text:empty::before {
+        content: "（まだ読み取られていません）";
+        color: var(--muted);
+        font-style: italic;
+      }
+      .result-text a {
+        color: var(--accent);
+      }
+      .status {
+        font-size: 0.85rem;
+        margin-top: 0.5rem;
+        color: var(--muted);
+      }
+      .status.success {
+        color: var(--success);
+      }
+      .status.error {
+        color: var(--danger);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>QRコードリーダー</h1>
+
+      <div class="panel">
+        <div class="tabs">
+          <button class="tab active" data-tab="camera">カメラ</button>
+          <button class="tab" data-tab="file">画像ファイル</button>
+        </div>
+
+        <div class="pane active" id="pane-camera">
+          <video id="video" playsinline muted></video>
+          <canvas id="canvas-preview"></canvas>
+          <div class="controls">
+            <button id="btn-start">カメラ開始</button>
+            <button id="btn-stop" class="secondary" disabled>停止</button>
+            <button id="btn-switch" class="secondary" disabled>
+              カメラ切替
+            </button>
+          </div>
+          <div class="status" id="camera-status"></div>
+        </div>
+
+        <div class="pane" id="pane-file">
+          <label class="dropzone" id="dropzone">
+            <input type="file" id="file-input" accept="image/*" />
+            <div>クリックまたはドラッグ＆ドロップで画像を選択</div>
+            <div style="font-size: 0.85rem; margin-top: 0.3rem">
+              PNG / JPEG / WebP など
+            </div>
+          </label>
+          <div class="status" id="file-status"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="result-label">読み取り結果</div>
+        <div class="result-text" id="result"></div>
+        <div class="controls">
+          <button id="btn-copy" class="secondary" disabled>コピー</button>
+          <button id="btn-open" class="secondary" disabled>
+            URLとして開く
+          </button>
+          <button id="btn-clear" class="secondary" disabled>クリア</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="jsQR.js"></script>
+    <script>
+      (() => {
+        const $ = (id) => document.getElementById(id);
+        const video = $("video");
+        const canvasPreview = $("canvas-preview");
+        const result = $("result");
+        const btnStart = $("btn-start");
+        const btnStop = $("btn-stop");
+        const btnSwitch = $("btn-switch");
+        const btnCopy = $("btn-copy");
+        const btnOpen = $("btn-open");
+        const btnClear = $("btn-clear");
+        const cameraStatus = $("camera-status");
+        const fileStatus = $("file-status");
+        const dropzone = $("dropzone");
+        const fileInput = $("file-input");
+
+        let stream = null;
+        let scanRAF = null;
+        let scanCanvas = document.createElement("canvas");
+        let scanCtx = scanCanvas.getContext("2d", { willReadFrequently: true });
+        let currentFacing = "environment";
+        let lastResult = "";
+
+        document.querySelectorAll(".tab").forEach((tab) => {
+          tab.addEventListener("click", () => {
+            document
+              .querySelectorAll(".tab")
+              .forEach((t) => t.classList.remove("active"));
+            document
+              .querySelectorAll(".pane")
+              .forEach((p) => p.classList.remove("active"));
+            tab.classList.add("active");
+            $("pane-" + tab.dataset.tab).classList.add("active");
+            if (tab.dataset.tab !== "camera") stopCamera();
+          });
+        });
+
+        function setStatus(el, msg, type = "") {
+          el.textContent = msg;
+          el.className = "status" + (type ? " " + type : "");
+        }
+
+        function setResult(text) {
+          lastResult = text;
+          result.textContent = "";
+          if (!text) {
+            btnCopy.disabled = true;
+            btnOpen.disabled = true;
+            btnClear.disabled = true;
+            return;
+          }
+          if (/^https?:\/\//i.test(text)) {
+            const a = document.createElement("a");
+            a.href = text;
+            a.target = "_blank";
+            a.rel = "noopener noreferrer";
+            a.textContent = text;
+            result.appendChild(a);
+            btnOpen.disabled = false;
+          } else {
+            result.textContent = text;
+            btnOpen.disabled = true;
+          }
+          btnCopy.disabled = false;
+          btnClear.disabled = false;
+        }
+
+        async function startCamera() {
+          try {
+            setStatus(cameraStatus, "カメラ起動中…");
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: { facingMode: currentFacing },
+              audio: false,
+            });
+            video.srcObject = stream;
+            video.style.display = "block";
+            canvasPreview.style.display = "none";
+            await video.play();
+            btnStart.disabled = true;
+            btnStop.disabled = false;
+            btnSwitch.disabled = false;
+            setStatus(cameraStatus, "スキャン中…");
+            scanLoop();
+          } catch (err) {
+            setStatus(
+              cameraStatus,
+              "カメラを起動できませんでした: " + err.message,
+              "error",
+            );
+          }
+        }
+
+        function stopCamera() {
+          if (scanRAF) {
+            cancelAnimationFrame(scanRAF);
+            scanRAF = null;
+          }
+          if (stream) {
+            stream.getTracks().forEach((t) => t.stop());
+            stream = null;
+          }
+          video.srcObject = null;
+          btnStart.disabled = false;
+          btnStop.disabled = true;
+          btnSwitch.disabled = true;
+        }
+
+        function scanLoop() {
+          if (!stream) return;
+          if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            const w = video.videoWidth;
+            const h = video.videoHeight;
+            if (w && h) {
+              scanCanvas.width = w;
+              scanCanvas.height = h;
+              scanCtx.drawImage(video, 0, 0, w, h);
+              const imgData = scanCtx.getImageData(0, 0, w, h);
+              const code = jsQR(imgData.data, w, h, {
+                inversionAttempts: "attemptBoth",
+              });
+              if (code && code.data) {
+                setResult(code.data);
+                setStatus(
+                  cameraStatus,
+                  "読み取り成功（再スキャン継続中）",
+                  "success",
+                );
+              }
+            }
+          }
+          scanRAF = requestAnimationFrame(scanLoop);
+        }
+
+        btnStart.addEventListener("click", startCamera);
+        btnStop.addEventListener("click", () => {
+          stopCamera();
+          setStatus(cameraStatus, "停止しました");
+        });
+        btnSwitch.addEventListener("click", async () => {
+          currentFacing =
+            currentFacing === "environment" ? "user" : "environment";
+          stopCamera();
+          await startCamera();
+        });
+
+        function decodeImageFile(file) {
+          if (!file || !file.type.startsWith("image/")) {
+            setStatus(fileStatus, "画像ファイルを選択してください", "error");
+            return;
+          }
+          setStatus(fileStatus, "デコード中…");
+          const url = URL.createObjectURL(file);
+          const img = new Image();
+          img.onload = () => {
+            const w = img.naturalWidth;
+            const h = img.naturalHeight;
+            scanCanvas.width = w;
+            scanCanvas.height = h;
+            scanCtx.drawImage(img, 0, 0);
+            const imgData = scanCtx.getImageData(0, 0, w, h);
+            const code = jsQR(imgData.data, w, h, {
+              inversionAttempts: "attemptBoth",
+            });
+            URL.revokeObjectURL(url);
+            if (code && code.data) {
+              setResult(code.data);
+              setStatus(fileStatus, "読み取り成功", "success");
+            } else {
+              setStatus(fileStatus, "QRコードを検出できませんでした", "error");
+            }
+          };
+          img.onerror = () => {
+            URL.revokeObjectURL(url);
+            setStatus(fileStatus, "画像を読み込めませんでした", "error");
+          };
+          img.src = url;
+        }
+
+        fileInput.addEventListener("change", (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (file) decodeImageFile(file);
+        });
+        ["dragenter", "dragover"].forEach((ev) =>
+          dropzone.addEventListener(ev, (e) => {
+            e.preventDefault();
+            dropzone.classList.add("dragover");
+          }),
+        );
+        ["dragleave", "drop"].forEach((ev) =>
+          dropzone.addEventListener(ev, (e) => {
+            e.preventDefault();
+            dropzone.classList.remove("dragover");
+          }),
+        );
+        dropzone.addEventListener("drop", (e) => {
+          const file = e.dataTransfer.files && e.dataTransfer.files[0];
+          if (file) decodeImageFile(file);
+        });
+
+        window.addEventListener("paste", (e) => {
+          const items = e.clipboardData && e.clipboardData.items;
+          if (!items) return;
+          for (const item of items) {
+            if (item.type.startsWith("image/")) {
+              const file = item.getAsFile();
+              if (file) {
+                document.querySelector('.tab[data-tab="file"]').click();
+                decodeImageFile(file);
+                break;
+              }
+            }
+          }
+        });
+
+        btnCopy.addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText(lastResult);
+            const orig = btnCopy.textContent;
+            btnCopy.textContent = "コピーしました";
+            setTimeout(() => {
+              btnCopy.textContent = orig;
+            }, 1500);
+          } catch (err) {
+            alert("コピーに失敗しました: " + err.message);
+          }
+        });
+        btnOpen.addEventListener("click", () => {
+          if (/^https?:\/\//i.test(lastResult)) {
+            window.open(lastResult, "_blank", "noopener,noreferrer");
+          }
+        });
+        btnClear.addEventListener("click", () => {
+          setResult("");
+          setStatus(cameraStatus, "");
+          setStatus(fileStatus, "");
+        });
+
+        setResult("");
+      })();
+    </script>
+  </body>
+</html>
