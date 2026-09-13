@@ -17,6 +17,7 @@ MyAHK v2は、AutoHotkey v2を使用したカスタムランチャー・ツー�
 ### テスト実行
 
 個別テストの実行：
+
 ```bash
 autohotkey.exe tests/test_create_obsidian_url.ahk
 autohotkey.exe tests/test_uri_decode.ahk
@@ -25,11 +26,24 @@ autohotkey.exe tests/test_uri_decode.ahk
 ### アプリケーション実行
 
 メインスクリプトの実行：
+
 ```bash
 autohotkey.exe myahk_v2.ahk
 ```
 
 または、VS Codeのデバッガーを使用（F5キーまたは「実行とデバッグ」から「AutoHotkey v2 Debugger」を選択）
+
+### 常駐スクリプトの再起動（変更を反映するとき）
+
+`#SingleInstance` を指定していないため、既存プロセスを止めてから起動する（PowerShell）:
+
+```powershell
+Get-CimInstance Win32_Process -Filter "Name like 'AutoHotkey%'" | Select-Object ProcessId,CommandLine   # myahk_v2.ahk の PID を確認
+Stop-Process -Id <PID> -Force
+Start-Process "C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe" -ArgumentList '"<myahk_v2.ahk の絶対パス>"'
+```
+
+起動後にプロセスが生きていて `MainWindowTitle` が空ならエラーダイアログなし（構文エラー時はダイアログが出てタイトルが付く）。
 
 ## アーキテクチャ
 
@@ -65,20 +79,24 @@ autohotkey.exe myahk_v2.ahk
 ### 重要な設計パターン
 
 #### 定数管理
+
 すべてのフォルダパスとユーザー固有設定は`Constants`クラス（`src/config/constants.ahk`）で集中管理。ユーザー名（`daido`か否か）によって設定が切り替わる。
 
 #### メニューシステム
+
 - `addMenu()` 関数でメニュー項目を動的に追加
 - ショートカット（.lnk）ファイルのターゲットパスからアイコンを自動設定
 - ハンドラー関数は`hash`マップでメニュー名と .lnk パスを紐付け
 - **ツール起動は .lnk 自体を `Run` する**（2026-09-13〜）。ターゲット exe を直接実行すると .lnk の作業フォルダ・引数・ウィンドウ状態が捨てられ、カレントディレクトリ依存の設定ファイルを読むツールが設定を読めないため
 
 #### ショートカット管理
+
 - `getLnkTarget()` でショートカットファイルの実際のパスを取得（用途はアイコン取得と無効ショートカット検証のみ。起動には使わない）
 - `shortcut_validator.ahk` で無効なショートカットを検証・修復
 - バックアップ機能でツールフォルダを安全に管理
 
 #### Obsidian統合
+
 - URI scheme（`obsidian://`）を使用してObsidianと連携
 - ユーザーごとに異なるVaultを使用（`Constants.OBSIDIAN_VAULT`）
 - `create_obsidian_url.ahk` でファイルパスをObsidian WikiLink URLに変換
@@ -99,6 +117,7 @@ autohotkey.exe myahk_v2.ahk
 ### 新しいツールをメニューに追加
 
 `src/menu/menu_setup.ahk`の`createToolsMenu()`内に追加：
+
 ```autohotkey
 addMenu(toolsMenu, menuHandler, hash, "表示名", "ファイル名.lnk", "")
 ```
@@ -106,6 +125,7 @@ addMenu(toolsMenu, menuHandler, hash, "表示名", "ファイル名.lnk", "")
 ### 新しいホットキーの追加
 
 `myahk_v2.ahk`にホットキー定義を追加：
+
 ```autohotkey
 vk1D & [key]::[アクション]
 ```
