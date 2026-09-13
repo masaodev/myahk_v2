@@ -144,19 +144,20 @@ addMenu(menuObj, hand, hashObj, displayName, lnkName) {
             ; アイコン設定に失敗した場合は無視
         }
 
-        hashObj[displayName] := exePath
+        ; 起動は .lnk 自体を実行する（作業フォルダ・引数・ウィンドウ状態を .lnk の設定通りにするため）
+        hashObj[displayName] := lnkPath
     }
 }
 
 ; メニューハンドラー
 menuHandler(ItemName, ItemPos, MyMenu) {
-    exePath := hash[ItemName]
-    Run exePath
+    lnkPath := hash[ItemName]
+    Run lnkPath
 }
 
 menuHandlerAll(ItemName, ItemPos, MyMenu) {
-    exePath := hashAll[ItemName]
-    Run exePath
+    lnkPath := hashAll[ItemName]
+    Run lnkPath
 }
 
 ; メインメニューアクションハンドラー
@@ -166,7 +167,7 @@ mainMenuActionHandler(ItemName, ItemPos, MyMenu) {
     ; tool: で始まる場合はツール起動
     if (SubStr(actionType, 1, 5) == "tool:") {
         lnkFile := SubStr(actionType, 6)
-        Run(getLnkTarget(Constants.TOOL_FOLDER "\" lnkFile))
+        Run(Constants.TOOL_FOLDER "\" lnkFile)  ; .lnk 自体を実行（作業フォルダ・引数を .lnk の設定通りにする）
         return
     }
 
@@ -239,7 +240,7 @@ executeMainMenuAction(actionType) {
     ; tool: で始まる場合はツール起動
     if (SubStr(actionType, 1, 5) == "tool:") {
         lnkFile := SubStr(actionType, 6)
-        Run(getLnkTarget(Constants.TOOL_FOLDER "\" lnkFile))
+        Run(Constants.TOOL_FOLDER "\" lnkFile)  ; .lnk 自体を実行（作業フォルダ・引数を .lnk の設定通りにする）
         return
     }
 
