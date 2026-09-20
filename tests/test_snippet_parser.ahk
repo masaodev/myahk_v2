@@ -75,6 +75,9 @@ check("date 書式指定", expandSnippetBody("a{date:yyyyMMdd}b", ""), "a" Forma
 check("date 複数", expandSnippetBody("{date:yyyy}-{date:MM}", ""), FormatTime(, "yyyy") "-" FormatTime(, "MM"))
 check("clipboard", expandSnippetBody("<{clipboard}>", "X"), "<X>")
 
+check("RegExEscape", RegExEscape("a.b(c)[d]{e}$|\\"), "a\.b\(c\)\[d\]\{e\}\$\|\\\\")
+check("パラメータなしはそのまま", expandSnippetBody("no params", ""), "no params")
+
 ; CRLF 入力も同じ結果になる
 itemsCrlf := parseSnippetText(StrReplace(sample, "`n", "`r`n"))
 check("CRLF 入力でも同じ", itemsCrlf[";md"][1].body, items[";md"][1].body)

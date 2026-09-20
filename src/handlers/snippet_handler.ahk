@@ -5,10 +5,14 @@
 ; espanso / Lintalist の代替として「使う機能だけ」を持つ:
 ;   - 打つと即展開（終端文字不要・単語の途中でも発火・大文字小文字は区別）
 ;   - 同じトリガーが複数あればカーソル位置に候補メニューを出して選ぶ
-;   - 本文中の {date:書式} を今日の日付に、{clipboard} をクリップボードに、
-;     {input:見出し} を入力ダイアログの内容に置き換える
+;   - 本文中の {date:書式} を今日の日付に、{clipboard} をクリップボードに置き換える
+;   - パラメータ: {input:名前} 1 行入力 / {input:名前=既定値} / {textarea:名前} 複数行 /
+;     {choice:名前=a|b|c} 選択。1 つのスニペットにある分をまとめて 1 つのフォームで聞く。
+;     同じ名前は 1 回だけ聞いて全箇所に入る
 ;   - $|$ で貼り付け後のカーソル位置を指定
 ;   - 複数行や長い本文はクリップボード経由で貼り付け（元のクリップボードは復元）
+;   - 本文が {search} または {search:初期フィルタ} のトリガーは検索窓を開く（例: [;;] → {search}）。
+;     候補メニューの末尾「🔍 絞り込み…」からも、そのトリガーの候補だけを検索窓で絞れる
 ; ファイル監視はしない。編集後は Func メニューの「スニペット再読込」で反映する。
 ;
 ; 設定ファイルの書式（config_samples/snippets.txt.sample も参照）:
@@ -122,6 +126,8 @@ snippetFire(trigger, *) {
         name := item.label != "" ? item.label "`t" preview : preview
         candidates.Add(name, snippetPasteFromMenu.Bind(item))
     }
+    candidates.Add()
+    candidates.Add("🔍 絞り込み…`t" trigger " の候補を検索窓で絞る", (*) => showSnippetPicker(trigger))
     ; 選択中の項目の本文をツールチップで全文表示するため、メニュー項目 ID -> 本文 を控える
     SnippetMenuState.bodies := Map()
     SnippetMenuState.positions := Map()
@@ -199,6 +205,10 @@ showMenuAtCaret(candidates) {
 
 ; 本文を展開して貼り付ける
 snippetPaste(item) {
+    if RegExMatch(item.body, "^\{search(?::(.*))?\}$", &sm) {
+        showSnippetPicker(sm[1])
+        return
+    }
     clipBefore := ClipboardAll()
     text := expandSnippetBody(item.body, A_Clipboard)
     if (text = "")           ; {input} をキャンセルしたとき
@@ -226,7 +236,7 @@ snippetPaste(item) {
         Send("{Left " left "}")
 }
 
-; {date:書式} {date} {clipboard} {input:見出し} を置き換える
+; {date:書式} {date} {clipboard} とパラメータ（{input} {textarea} {choice}）を置き換える。キャンセルは空文字
 expandSnippetBody(body, clipText) {
     text := body
     while RegExMatch(text, "\{date(?::([^}]*))?\}", &m) {
@@ -234,32 +244,69 @@ expandSnippetBody(body, clipText) {
         text := StrReplace(text, m[0], FormatTime(, fmt), , , 1)
     }
     text := StrReplace(text, "{clipboard}", clipText)
-    while RegExMatch(text, "\{input(?::([^}]*))?\}", &m) {
-        answer := askSnippetInput(m[1] != "" ? m[1] : "入力")
-        if (answer = "")
-            return ""
-        text := StrReplace(text, m[0], answer, , , 1)
+
+    ; パラメータを集める（出現順・名前で一意）
+    fields := []
+    seen := Map()
+    pos := 1
+    while (pos := RegExMatch(text, "\{(input|textarea|choice)(?::([^}=]*)(?:=([^}]*))?)?\}", &m, pos)) {
+        pos += StrLen(m[0])
+        kind := m[1]
+        name := m[2] != "" ? m[2] : "入力"
+        if seen.Has(name)
+            continue
+        seen[name] := true
+        fields.Push({kind: kind, name: name, default: m[3], token: m[0]})
     }
+    if !fields.Length
+        return text
+
+    values := askSnippetForm(fields, text)
+    if !values.Count
+        return ""
+    for f in fields
+        text := RegExReplace(text, "\{" f.kind "(?::" RegExEscape(f.name) "(?:=[^}]*)?)?\}", StrReplace(values[f.name], "$", "$$"))
     return text
 }
 
-; 複数行の入力ダイアログ（OK で本文を返す。キャンセルは空文字）
-askSnippetInput(title) {
-    result := ""
-    dlg := Gui("+AlwaysOnTop", "スニペット入力: " title)
+RegExEscape(str) {
+    return RegExReplace(str, "[\\.*?+^$|()\[\]{}]", "\$0")
+}
+
+; パラメータ入力フォーム。上にスニペット本文を表示し、下に欄を並べる。OK で Map(名前 -> 値)、キャンセルなら空の Map
+askSnippetForm(fields, body) {
+    values := Map()
+    dlg := Gui("+AlwaysOnTop", "スニペット入力")
     dlg.SetFont("s10")
-    editBox := dlg.Add("Edit", "w520 h240 Multi WantTab")
-    ok := dlg.Add("Button", "Default w100", "OK")
+    dlg.Add("Text", "xm", "スニペット")
+    dlg.Add("Edit", "xm w520 h140 ReadOnly", body)
+    controls := Map()
+    for f in fields {
+        dlg.Add("Text", "xm", f.name)
+        if (f.kind = "textarea")
+            controls[f.name] := dlg.Add("Edit", "xm w520 h160 Multi WantTab", f.default)
+        else if (f.kind = "choice") {
+            options := StrSplit(f.default, "|")
+            controls[f.name] := dlg.Add("DropDownList", "xm w520 Choose1", options)
+        } else
+            controls[f.name] := dlg.Add("Edit", "xm w520 -Multi", f.default)
+    }
+    ok := dlg.Add("Button", "xm Default w100", "OK")
     cancel := dlg.Add("Button", "x+10 w100", "キャンセル")
-    ok.OnEvent("Click", (*) => (result := editBox.Value, dlg.Destroy()))
+    submit(*) {
+        for name, ctl in controls
+            values[name] := ctl.Text
+        dlg.Destroy()
+    }
+    ok.OnEvent("Click", submit)
     cancel.OnEvent("Click", (*) => dlg.Destroy())
     dlg.OnEvent("Close", (*) => dlg.Destroy())
     dlg.OnEvent("Escape", (*) => dlg.Destroy())
     dlg.Show()
-    editBox.Focus()
+    controls[fields[1].name].Focus()
     hwnd := dlg.Hwnd
     WinWaitClose("ahk_id " hwnd)
-    return result
+    return values
 }
 
 ; Func メニュー用ハンドラー
@@ -271,4 +318,135 @@ handlerOpenSnippetsConfig(*) {
     if !FileExist(Constants.SNIPPETS_CONFIG)
         FileAppend("", Constants.SNIPPETS_CONFIG, "UTF-8")
     Run(Constants.SNIPPETS_CONFIG)
+}
+
+; ===========================================
+; 検索窓（全スニペットをフィルタして選ぶ）
+; ===========================================
+class SnippetPicker {
+    static win := 0            ; Gui（初回に作って使い回す）
+    static filterBox := 0
+    static listView := 0
+    static previewBox := 0
+    static rows := []          ; 一覧の行 -> {trigger, label, body}
+    static target := 0         ; 貼り付け先ウィンドウ（開く直前のアクティブウィンドウ）
+}
+
+; 検索窓を開く。initialFilter はフィルタ欄の初期値（トリガー名など）
+showSnippetPicker(initialFilter := "") {
+    SnippetPicker.target := WinExist("A")
+    if !SnippetPicker.win
+        buildSnippetPicker()
+    SnippetPicker.filterBox.Value := initialFilter
+    refreshSnippetPicker()
+    SnippetPicker.win.Show("w760")
+    SnippetPicker.filterBox.Focus()
+    Send("{End}")
+}
+
+buildSnippetPicker() {
+    win := Gui("+AlwaysOnTop +Resize +MinSize600x400", "スニペット検索")
+    win.SetFont("s10")
+    win.Add("Text", , "絞り込み（空白区切りで AND。トリガー・ラベル・本文を対象）")
+    filterBox := win.Add("Edit", "w740 -Multi")
+    listView := win.Add("ListView", "w740 r10 -Multi Grid", ["トリガー", "ラベル", "本文"])
+    previewBox := win.Add("Edit", "w740 r10 ReadOnly")
+    win.Add("Text", , "↑↓ 選択 / Enter 貼り付け / Esc 閉じる")
+
+    filterBox.OnEvent("Change", (*) => refreshSnippetPicker())
+    listView.OnEvent("ItemFocus", (lv, row) => updateSnippetPreview(row))
+    listView.OnEvent("DoubleClick", (lv, row) => chooseSnippetFromPicker())
+    win.OnEvent("Escape", (*) => win.Hide())
+    win.OnEvent("Close", (*) => win.Hide())
+    win.OnEvent("Size", (g, minMax, w, h) => resizeSnippetPicker(w, h))
+
+    ; 検索窓がアクティブなときだけ効くキー
+    HotIfWinActive("ahk_id " win.Hwnd)
+    Hotkey("Enter", (*) => chooseSnippetFromPicker())
+    Hotkey("Down", (*) => moveSnippetSelection(1))
+    Hotkey("Up", (*) => moveSnippetSelection(-1))
+    HotIfWinActive()
+
+    SnippetPicker.win := win
+    SnippetPicker.filterBox := filterBox
+    SnippetPicker.listView := listView
+    SnippetPicker.previewBox := previewBox
+}
+
+resizeSnippetPicker(w, h) {
+    m := 10
+    SnippetPicker.filterBox.Move(, , w - m * 2)
+    SnippetPicker.listView.GetPos(, &lvY)
+    lvH := Round((h - lvY - 40) * 0.55)
+    SnippetPicker.listView.Move(, , w - m * 2, lvH)
+    SnippetPicker.previewBox.Move(, lvY + lvH + m, w - m * 2, Round((h - lvY - 40) * 0.45) - m * 2)
+}
+
+; フィルタに合う候補で一覧を作り直す
+refreshSnippetPicker() {
+    words := []
+    for w in StrSplit(Trim(SnippetPicker.filterBox.Value), [" ", "　"])
+        if (w != "")
+            words.Push(w)
+    lv := SnippetPicker.listView
+    lv.Opt("-Redraw")
+    lv.Delete()
+    SnippetPicker.rows := []
+    for trigger, list in SnippetStore.items {
+        for item in list {
+            if RegExMatch(item.body, "^\{search(?::(.*))?\}$")
+                continue
+            haystack := trigger " " item.label " " item.body
+            hit := true
+            for w in words
+                if !InStr(haystack, w) {
+                    hit := false
+                    break
+                }
+            if !hit
+                continue
+            lv.Add("", trigger, item.label, snippetPreview(item.body))
+            SnippetPicker.rows.Push(item)
+        }
+    }
+    lv.ModifyCol(1, 90)
+    lv.ModifyCol(2, 260)
+    lv.ModifyCol(3, 360)
+    lv.Opt("+Redraw")
+    if SnippetPicker.rows.Length {
+        lv.Modify(1, "Select Focus")
+        updateSnippetPreview(1)
+    } else
+        SnippetPicker.previewBox.Value := ""
+}
+
+updateSnippetPreview(row) {
+    if (row >= 1 && row <= SnippetPicker.rows.Length)
+        SnippetPicker.previewBox.Value := SnippetPicker.rows[row].body
+}
+
+moveSnippetSelection(delta) {
+    lv := SnippetPicker.listView
+    count := SnippetPicker.rows.Length
+    if !count
+        return
+    row := lv.GetNext() + delta
+    row := row < 1 ? 1 : (row > count ? count : row)
+    lv.Modify(row, "Select Focus Vis")
+    updateSnippetPreview(row)
+}
+
+; 選択中の候補を貼り付け先に貼る
+chooseSnippetFromPicker() {
+    row := SnippetPicker.listView.GetNext()
+    if (row < 1 || row > SnippetPicker.rows.Length)
+        return
+    item := SnippetPicker.rows[row]
+    SnippetPicker.win.Hide()
+    if SnippetPicker.target {
+        WinActivate("ahk_id " SnippetPicker.target)
+        WinWaitActive("ahk_id " SnippetPicker.target, , 1)
+        Sleep(100)
+    }
+    snippetPaste(item)
 }
