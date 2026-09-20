@@ -15,6 +15,7 @@ class Constants {
     static TOOLS_MENU_CONFIG := Constants.MYAHK_V2_FOLDER "\tools_menu.txt"
     static MAIN_MENU_CONFIG := Constants.MYAHK_V2_FOLDER "\main_menu.txt"
     static USER_CONFIG := Constants.MYAHK_V2_FOLDER "\user_config.ini"
+    static SNIPPETS_CONFIG := Constants.MYAHK_V2_FOLDER "\snippets.txt"
 
     ; ユーザー設定（INIファイルから読み込み、デフォルト値あり）
     static OBSIDIAN_VAULT := Constants._ReadUserConfig("Obsidian", "vault", "obsidian-work")

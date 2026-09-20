@@ -15,3 +15,6 @@ backup/
 # Temporary files
 *.tmp
 *.log
+
+# Test results
+tests/*_test_results.txt

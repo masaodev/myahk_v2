@@ -111,6 +111,7 @@ Start-Process "C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe" -ArgumentList '"
 - **myfunc_handler.ahk**: テキスト整形（空白除去、引用追加、メール用整形など）
 - **shortcut_validator.ahk**: ショートカット検証、修復、バックアップ機能
 - **shortcut_ui_handler.ahk**: ショートカット管理UI表示
+- **snippet_handler.ahk**: スニペット（定型文）展開。`snippets.txt` を `parseSnippetText()` で読み、`Hotstring()` を動的登録。同一トリガー複数は候補メニュー、`{date}` `{clipboard}` `{input}` `$|$` を `expandSnippetBody()` / `snippetPaste()` で処理。ファイル監視はしない（Func メニューの再読込で反映）
 
 ## 新機能追加時のガイドライン
 
@@ -130,6 +131,13 @@ addMenu(toolsMenu, menuHandler, hash, "表示名", "ファイル名.lnk", "")
 vk1D & [key]::[アクション]
 ```
 
+### スニペット（定型文）の仕様上の注意
+
+- ホットストリングは `:*?C:` で登録（終端文字なし・単語の途中でも発火・大文字小文字を区別）。そのため、あるトリガーが別のトリガーの先頭部分と一致すると短い方が先に発火する（`;git` と `;gitfix`）
+- 貼り付けは 1 行かつ 40 文字以下なら `SendText`、それ以外はクリップボード経由（`ClipboardAll()` で退避・復元）
+- AutoHotkey 製スクリプトからの `Send` ではホットストリングは発火しない（`SendLevel` 0 の人工入力はフックが無視する）。動作確認は人が打つか .NET `SendKeys` から行う
+- パーサーは純粋関数なので `tests/test_snippet_parser.ahk` で検証する（本文の行末空白を扱うテストは、エディタに落とされないよう目印文字列から生成している）
+
 ### 新しいFuncメニュー機能の追加
 
 1. `src/handlers/myfunc_handler.ahk`にハンドラー関数を作成
@@ -145,3 +153,4 @@ vk1D & [key]::[アクション]
 - テストファイルは`tests/`ディレクトリに配置
 - テスト結果は`test_results.txt`に出力される形式を使用
 - 各ユーティリティ関数（URI処理、Obsidian URL生成など）に対してテストを作成
+- スニペットのパーサー: `autohotkey.exe tests/test_snippet_parser.ahk`（終了コード 0 で全件成功。結果は `tests/snippet_parser_test_results.txt`）

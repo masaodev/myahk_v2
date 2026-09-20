@@ -15,6 +15,7 @@
 #Include src/utils/create_shortcut.ahk
 #Include src/utils/shortcut_validator.ahk
 #Include src/handlers/shortcut_ui_handler.ahk
+#Include src/handlers/snippet_handler.ahk
 
 ; ===========================================
 ; 初期化
@@ -42,3 +43,6 @@ vk1D & g::Send("^!e")                       ; 無変換 + G: Ctrl+Alt+E を送�
 
 ; メインメニューアクション項目のホットキーを設定ファイルから動的に登録
 registerMainMenuHotkeys()
+
+; スニペット（定型文）を snippets.txt から登録
+loadSnippets()
