@@ -155,7 +155,7 @@ git worktree list
 - パラメータ: `{input:名前}`（1 行、`=既定値` 可）・`{textarea:名前}`（複数行）・`{choice:名前=a|b|c}`（選択）。1 つのスニペット内の分をまとめて 1 つのフォームで聞く
 - `;;` のように本文を `{search}` にしたトリガーで検索窓（フィルタ＋プレビュー）を開ける。候補メニュー末尾の「🔍 絞り込み…」でも開く
 - ファイルは監視しないので、編集後は Func メニュー（無変換 + S）の「スニペット再読込」を実行
-- 書式の詳細とサンプルは `config_samples/snippets.txt.sample`
+- **書式の完全な仕様は [docs/snippets.md](docs/snippets.md)**（AI アシスタントに設定を頼むときはこのページを読ませる）。サンプルは `config_samples/snippets.txt.sample`
 
 #### ホットキーのカスタマイズ
 
