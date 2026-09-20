@@ -50,12 +50,14 @@ MyAHK v2は、AutoHotkey v2を使用したカスタムランチャー・ツー�
    Copy-Item "config_samples\user_config.ini.sample" "$dest\user_config.ini"
    Copy-Item "config_samples\tools_menu.txt.sample" "$dest\tools_menu.txt"
    Copy-Item "config_samples\main_menu.txt.sample" "$dest\main_menu.txt"
+   Copy-Item "config_samples\snippets.txt.sample" "$dest\snippets.txt"
    ```
 
    または手動でコピーして、必要に応じて編集してください：
    - **`user_config.ini`**: 個人設定（一時メモパス、外部アプリ連携設定など）
    - **`tools_menu.txt`**: ツールメニュー（無変換+T）の項目設定
    - **`main_menu.txt`**: メインメニューのアクション項目とホットキー設定
+   - **`snippets.txt`**: スニペット（定型文）の定義（任意。無ければスニペット機能は無効のまま起動する）
 
 4. **初回起動**
    ```
